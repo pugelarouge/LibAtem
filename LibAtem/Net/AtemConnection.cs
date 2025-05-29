@@ -10,7 +10,6 @@ using LibAtem.Commands.DeviceProfile;
 using LibAtem.MacroOperations;
 using LibAtem.Serialization;
 using LibAtem.Util;
-using System.Diagnostics;
 
 namespace LibAtem.Net
 {
@@ -213,16 +212,12 @@ namespace LibAtem.Net
                     {
                         _protocolVersion = verCmd.ProtocolVersion;
                         // TODO - log version info
-                    } else if (cmd is InitializationCompleteCommand)
+                    }
+                    else if (cmd is InitializationCompleteCommand)
                     {
                         OnInitComplete?.Invoke(this);
                     }
                     result.AddIfNotNull(cmd);
-
-                    if (cmd == null)
-                    {
-                        Debug.WriteLine($"Received unknown command {rawCmd.Name} with content {payloadStr}");
-                    }
                 }
 
                 return result;
@@ -375,24 +370,31 @@ namespace LibAtem.Net
 
         private void SendMessage(Socket socket, InFlightMessage msg)
         {
-            byte[] body = CompileMessage(msg);
-            msg.LastSent = DateTime.Now;
-
             try
             {
-                socket.SendTo(body, SocketFlags.None, Endpoint);
-            }
-            catch (SocketException e)
-            {
-                Log.ErrorFormat("Send failed: {0}", e);
-            }
-            catch (ObjectDisposedException)
-            {
-                Log.ErrorFormat("{0} - Discarding message due to socket being disposed", Endpoint);
-                // Mark as timed out. This will cause it to be cleaned up shortly
-                _lastReceivedTime = DateTime.MinValue;
+                byte[] body = CompileMessage(msg);
+                msg.LastSent = DateTime.Now;
 
-                OnDisconnect?.Invoke(this);
+                try
+                {
+                    socket.SendTo(body, SocketFlags.None, Endpoint);
+                }
+                catch (SocketException e)
+                {
+                    Log.ErrorFormat("Send failed: {0}", e);
+                }
+                catch (ObjectDisposedException)
+                {
+                    Log.ErrorFormat("{0} - Discarding message due to socket being disposed", Endpoint);
+                    // Mark as timed out. This will cause it to be cleaned up shortly
+                    _lastReceivedTime = DateTime.MinValue;
+
+                    OnDisconnect?.Invoke(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorFormat("Generic error on SendMessage: {0}", ex.StackTrace);
             }
         }
 
@@ -421,7 +423,7 @@ namespace LibAtem.Net
         {
             byte opcode = CompileOpcode(msg.Message.Type, msg.LastSent != DateTime.MinValue);
             if (msg.AckId.HasValue)
-                opcode |= (byte) ReceivedPacket.CommandCodeFlags.AckReply;
+                opcode |= (byte)ReceivedPacket.CommandCodeFlags.AckReply;
 
             byte len1 = (byte)((ReceivedPacket.HeaderLength + msg.Message.Payload.Length) / 256 | opcode << 3); // opcode 0x08 + length
             byte len2 = (byte)((ReceivedPacket.HeaderLength + msg.Message.Payload.Length) % 256);
