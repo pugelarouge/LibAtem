@@ -16,7 +16,9 @@ namespace LibAtem
         V8_1_1 = 0x0002001E, // 2.30
         [ProtocolVersionName("v9.4.0")]
         V9_4 = 0x0002001F, // 2.31
-        Latest = V9_4
+        [ProtocolVersionName("v9.6.0")]
+        V9_6 = 0x00020020, // 2.32
+        Latest = V9_6
     }
     
     public class ProtocolVersionNameAttribute : System.Attribute

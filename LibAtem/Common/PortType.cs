@@ -19,6 +19,8 @@ namespace LibAtem.Common
         Mask = 130,
         [Since(ProtocolVersion.V8_1_1)]
         MultiViewer = 131,
+        [Since(ProtocolVersion.V9_4)]
+        AudioMonitor = 132
     }
 
     [Flags]
